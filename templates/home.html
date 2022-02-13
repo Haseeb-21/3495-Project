@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Grades</title>
+</head>
+
+<body>
+    <h1>Grades</h1>
+    <form action="" method="POST">
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                {% for message in messages %}
+                    {{ message }}
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        <p>Course Grade</p>
+        <p>1. <input type="text" name="course1" value="{{ data[0][1] }}"> <input type="text" name="grade1" value="{{ data[0][2] }}"></p>
+        <p>2. <input type="text" name="course2" value="{{ data[1][1] }}"> <input type="text" name="grade2" value="{{ data[1][2] }}"></p>
+        <p>3. <input type="text" name="course3" value="{{ data[2][1] }}"> <input type="text" name="grade3" value="{{ data[2][2] }}"></p>
+        <p>4. <input type="text" name="course4" value="{{ data[3][1] }}"> <input type="text" name="grade4" value="{{ data[3][2] }}"></p>
+        <p>5. <input type="text" name="course5" value="{{ data[4][1] }}"> <input type="text" name="grade5" value="{{ data[4][2] }}"></p>
+        <p>6. <input type="text" name="course6" value="{{ data[5][1] }}"> <input type="text" name="grade6" value="{{ data[5][2] }}"></p>
+        <p>7. <input type="text" name="course7" value="{{ data[6][1] }}"> <input type="text" name="grade7" value="{{ data[6][2] }}"></p>
+        
+        <input type="submit">
+
+    </form>
+</body>
+</html>
+
+
