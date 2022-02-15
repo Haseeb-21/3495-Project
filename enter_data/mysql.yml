@@ -1,0 +1,7 @@
+version: 1 
+datastore: 
+  user: "root" 
+  password: "Haseeb-2001" 
+  hostname: "localhost" 
+  port: 3306
+  db: "grades"
