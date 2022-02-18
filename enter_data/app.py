@@ -1,8 +1,13 @@
-from flask import Flask, request, render_template, url_for, redirect, flash
+from flask import Flask, request, render_template, url_for, redirect, flash, Blueprint, session
 from flask_mysqldb import MySQL
+import sys, os
+sys.path.insert(0, os.path.abspath('..'))
+
+from authentication import auth
 import yaml
 
 app = Flask(__name__)
+flash_auth = Blueprint('auth', __name__)
 app.secret_key = b'_5#y2L"F4Q8z\n\xec]/'
 
 with open('mysql.yml', 'r') as f: 
@@ -15,15 +20,21 @@ with open('mysql.yml', 'r') as f:
 
 
 @app.route('/', methods=['GET'])
-def my_form():
+def data_entry():
     cur = mysql.connection.cursor()            # updates default values
     cur.execute("SELECT * FROM grades")
     data = cur.fetchall()
-
-    return render_template('home.html', data=data)
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+    else:
+        #response.headers['Cache-Control'] = 'no-cache'
+        return render_template('home.html', data=data)
+    
+    
+    
 
 @app.route('/', methods=['POST'])
-def my_form_post():
+def date_entry_post():
     grades_list = {}
     i = 1
 
@@ -35,17 +46,17 @@ def my_form_post():
             i += 1
             if float(grade) > 100 or float(grade) < 0:
                 flash("❌⚠️ Grades must be in range of 0-100")
-                return redirect(url_for("my_form"))
+                return redirect(url_for("data_entry"))
         elif grade == "":
             break
         else:
             flash("❌⚠️ Grades should be numeric values")
-            return redirect(url_for("my_form"))
+            return redirect(url_for("data_entry"))
 
     
     if len(grades_list) != 7:
             flash("❌⚠️ Please enter a grade for all courses")
-            return redirect(url_for("my_form"))
+            return redirect(url_for("data_entry"))
 
     else:
         cur = mysql.connection.cursor()
@@ -60,10 +71,57 @@ def my_form_post():
             id+=1
 
         flash("✅ Grades updated successfully")
-        return redirect(url_for("my_form"))
-        #return render_template('home.html')
+        return redirect(url_for("data_entry"))
 
 
+@app.route('/login')
+def login():
+    session["logged_in"] = False
+    return render_template('login.html')
+
+@app.route('/login', methods=["POST"])
+def login_post():
+    username = request.form["username"]
+    password = request.form["password"]
+
+    auth_check = auth.check_auth(username, password)
+    if auth_check == True:
+        flash("Login successful")
+        session["logged_in"] = True
+        return redirect(url_for("data_entry"))
+    else:
+        flash("Login failed.")
+        return redirect(url_for("login"))
+
+@app.route('/register')
+def register():
+    session["logged_in"] = False
+    return render_template('register.html')
+
+
+@app.route('/register', methods=["POST"])
+def register_post():
+    username = request.form["username"]
+    password = request.form["password"]
+
+    if len(username) == 0 or len(password) == 0:
+        flash("Please enter username and password.")
+        return redirect(url_for("register"))
+
+    add_user = auth.add_user(username, password)
+    if add_user == False:
+        flash("Username already exists.")
+        return redirect(url_for("register"))
+    else:
+        flash("Account created. Please login.")
+        return redirect(url_for("login"))
+
+
+"""@app.route('/logout', methods=["POST"])
+def logout():
+    print("e")
+    flash("Successfully logged out")
+    return redirect(url_for("login"))"""
     
 
 if __name__ == '__main__':
