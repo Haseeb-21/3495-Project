@@ -1,0 +1,82 @@
+version: "2.1"
+
+services:
+  get_data_app:
+    build:
+      context: ./enter_data
+    container_name: "Enter_Data_App"
+    depends_on:
+      mysql_db:
+        condition: service_healthy
+      authentication:
+        condition: service_healthy
+    ports:
+      - "5000:5000"
+  show_results_app:
+    build:
+      context: ./show_results
+    container_name: "Show_Results_App"
+    depends_on:
+      mongo_db:
+        condition: service_healthy
+      authentication:
+        condition: service_healthy
+    ports:
+      - "5001:5001"
+  mysql_db:
+    build: 
+      context: ./mysql
+    container_name: "MySQL_DB"
+    ports:
+      - "3307:3306"
+    healthcheck:
+            test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost"]
+            timeout: 20s
+            retries: 10
+  analytics:
+    build:
+      context: ./analytics
+    container_name: "Analytics_Service"
+    depends_on:
+      mysql_db:
+        condition: service_healthy
+      mongo_db:
+        condition: service_healthy
+  mongo_db:
+    build: 
+      context: ./mongodb
+    container_name: "MongoDB"
+    ports:
+      - "27018:27017"
+    volumes:
+      - ./db:/docker-entrypoint-initdb.d/:ro
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongo localhost:27017/productiondb --quiet
+      interval: 10s
+      timeout: 10s
+      retries: 5
+  authentication:
+    build: 
+      context: ./authentication
+    container_name: "Authentication"
+    ports:
+      - "3308:3307"
+    healthcheck:
+            test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost"]
+            timeout: 20s
+            retries: 10
+
+
+
+
+
+ 
+
+  
+
+
+
+
+    
+
+  

@@ -1,29 +1,74 @@
 from flask import Flask, request, render_template, url_for, redirect, flash, Blueprint, session
-from flask_mysqldb import MySQL
-import sys, os
-sys.path.insert(0, os.path.abspath('..'))
-
-from authentication import auth
-import yaml
+import mysql.connector
 
 app = Flask(__name__)
 flash_auth = Blueprint('auth', __name__)
 app.secret_key = b'_5#y2L"F4Q8z\n\xec]/'
 
-with open('mysql.yml', 'r') as f: 
-    app_config = yaml.safe_load(f.read())
-    app.config['MYSQL_USER'] = app_config['datastore']['user']
-    app.config['MYSQL_PASSWORD'] = app_config['datastore']['password']
-    app.config['MYSQL_DB'] = app_config['datastore']['db']
-    app.config['MYSQL_HOST'] = app_config['datastore']['hostname']
-    mysql = MySQL(app)
+mydb = mysql.connector.connect(
+  host="mysql_db",
+  user="root",
+  password="123",
+  port="3306",
+  database="grades"
+)
+
+auth_db = mysql.connector.connect(
+  host="authentication",
+  user="root",
+  password="123",
+  port="3306",
+  database="authentication"
+)
+
+
+cursor = mydb.cursor()
+cursor.execute("SHOW TABLES")
+for x in cursor:
+    pass
+
+try:
+    cursor.execute(''' 
+                CREATE TABLE grades (
+                id INT NOT NULL AUTO_INCREMENT,
+                course VARCHAR(45) NOT NULL,
+                grade INT NOT NULL,
+                PRIMARY KEY (id));
+            ''')            
+    cursor.execute("insert into grades(course, grade) values('ACIT3495', 0)")
+    cursor.execute("insert into grades(course, grade) values('ACIT3855', 0)")
+    cursor.execute("insert into grades(course, grade) values('ACIT4640', 0)")
+    cursor.execute("insert into grades(course, grade) values('ACIT4620', 0)")
+    cursor.execute("insert into grades(course, grade) values('ACIT4850', 0)")
+    cursor.execute("insert into grades(course, grade) values('ACIT4880', 0)")
+    cursor.execute("insert into grades(course, grade) values('ACIT4900', 0)")
+    mydb.commit()
+except mysql.connector.errors.ProgrammingError:
+    pass
+
+auth_cursor = auth_db.cursor()
+auth_cursor.execute("SHOW TABLES")
+for x in auth_cursor:
+    pass
+
+try:
+    auth_cursor.execute(''' 
+                CREATE TABLE users (
+                username VARCHAR(45) NOT NULL,
+                password VARCHAR(45) NOT NULL
+                );
+            ''')            
+    auth_db.commit()
+except mysql.connector.errors.ProgrammingError:
+    pass
 
 
 @app.route('/', methods=['GET'])
 def data_entry():
-    cur = mysql.connection.cursor()            # updates default values
-    cur.execute("SELECT * FROM grades")
-    data = cur.fetchall()
+    cursor = mydb.cursor()
+    cursor.execute("SELECT * FROM grades")
+    data = cursor.fetchall()
+
     if not session.get('logged_in'):
         return redirect(url_for('login'))
     else:
@@ -59,15 +104,15 @@ def date_entry_post():
             return redirect(url_for("data_entry"))
 
     else:
-        cur = mysql.connection.cursor()
+        cursor = mydb.cursor()
         #query="insert into grades(course, grade) values(%s,%s)"            # insert query
         query="update grades set course = %s, grade = %s where id = %s"     # update query
 
         id = 1
         for item in grades_list.items():
             #cur.execute(query, (item[0],item[1]))       # inserts into db
-            cur.execute(query, (item[0],item[1],id))    # alters existing entries
-            mysql.connection.commit()
+            cursor.execute(query, (item[0],item[1],id))    # alters existing entries
+            mydb.commit()
             id+=1
 
         flash("✅ Grades updated successfully")
@@ -84,7 +129,15 @@ def login_post():
     username = request.form["username"]
     password = request.form["password"]
 
-    auth_check = auth.check_auth(username, password)
+    auth_cursor = auth_db.cursor()
+    auth_cursor.execute("SELECT * from users")
+    
+    auth_check = False
+    for x in auth_cursor:
+        if x[0] == username:
+            if x[1] == password:
+                auth_check = True
+
     if auth_check == True:
         flash("Login successful")
         session["logged_in"] = True
@@ -104,24 +157,34 @@ def register_post():
     username = request.form["username"]
     password = request.form["password"]
 
+    auth_cursor = auth_db.cursor()
+    
+    add_user = True
+    auth_cursor.execute("SELECT * FROM users")
+    for x in auth_cursor:
+        if x[0] == username:
+            add_user = False
+
     if len(username) == 0 or len(password) == 0:
         flash("Please enter username and password.")
         return redirect(url_for("register"))
 
-    add_user = auth.add_user(username, password)
+
     if add_user == False:
-        flash("Username already exists.")
+        flash("User already exists.")
         return redirect(url_for("register"))
     else:
+        query="INSERT INTO users VALUES(%s, %s)"
+        auth_cursor.execute(query, (username, password))
+        auth_db.commit()
         flash("Account created. Please login.")
         return redirect(url_for("login"))
 
 
-"""@app.route('/logout', methods=["POST"])
+@app.route('/logout', methods=["GET"])
 def logout():
-    print("e")
     flash("Successfully logged out")
-    return redirect(url_for("login"))"""
+    return redirect(url_for("login"))
     
 
 if __name__ == '__main__':

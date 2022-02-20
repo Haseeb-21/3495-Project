@@ -1,0 +1,8 @@
+FROM mysql:latest
+
+ENV MYSQL_DATABASE=grades \
+    MYSQL_ROOT_PASSWORD=123
+
+WORKDIR /usr
+
+

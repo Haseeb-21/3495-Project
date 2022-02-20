@@ -1,26 +1,39 @@
-var mysql = require('mysql');
+var mysql = require('mysql2');
 
 var con = mysql.createConnection({
-  host: "localhost",
+  host: "mysql_db",
   user: "root",
-  password: "Haseeb-2001",
+  password: "123",
   database: "grades"
 });
 
 
 var MongoClient = require('mongodb').MongoClient;
-var url = "mongodb://localhost:27017/analytics";
+var url = "mongodb://mongo_db:27017/analytics";
 
 function updateMongo(min, max, mean) {
 // update entry
 MongoClient.connect(url, function(err, db) {
     if (err) throw err;
+    var dbo = db.db('analytics');
+    dbo.listCollections().toArray((err, collections) => {
+        if (collections.length == 0) {
+          dbo.createCollection("statistics", function(err, res) {
+            if (err) throw err;
+            console.log("Collection created!");
+          });
+          myobj =  { id: 1, min: 0, max: 0, mean: 0 } ;
+          dbo.collection("statistics").insertOne(myobj)
+        }
+          
+        })
+    
     var dbo = db.db("analytics");
     var myquery = { "id": 1 };
     var newvalues = { $set: { min: min, max: max, mean: mean } };
-    dbo.collection("analytics").updateOne(myquery, newvalues, function(err, res) {
+    dbo.collection("statistics").updateOne(myquery, newvalues, function(err, res) {
       if (err) throw err;
-      console.log("1 document updated");
+      //console.log("1 document updated");
       //db.close();
     });
   });
